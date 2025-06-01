@@ -96,8 +96,19 @@ pyinstaller --icon=shaggy.ico --name=StockSim stocksim/main.py
 ## Notes
 
 - Compatible with Python 3.7–3.12, PyInstaller 5.13.2, and setuptools <80 (tested with 79.0.1).
-- Log files are saved in the `logs` folder, with a new file for each run.
+- **Note:** Logging to files has been removed due to compatibility issues. All output is now printed to the console.
 - For issues or feature requests, please use the [GitHub Issue Tracker](https://github.com/ElementalPublishing/StockSim/issues).
+
+> **Note:**  
+> If you get a `'stocksim' is not recognized as an internal or external command` error, you may need to add your Python Scripts directory to your system PATH.
+>
+> For a typical Python installation on Windows, add:
+> ```
+> C:\Users\<YourUser>\AppData\Local\Programs\Python\<Your Python Version>\Scripts
+> ```
+> (Replace `<YourUser>` with your actual username and `<Your Python Version>` with your installed Python version, e.g., `Python312`.)
+>
+> After updating your PATH, restart your terminal or Command Prompt and try running `stocksim` again.
 
 ---
 
