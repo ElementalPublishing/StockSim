@@ -12,7 +12,6 @@ StockSim is a Python command-line tool for estimating the probability of gain fo
 - Uses real historical data via [yfinance](https://github.com/ranaroussi/yfinance)
 - Multiprocessing for fast simulations
 - Command-line interface
-- Logging to file and console
 
 ---
 
