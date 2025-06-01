@@ -1,6 +1,5 @@
 import sys
 import os
-import logging
 import multiprocessing
 
 def simulate_batch(args):
@@ -74,7 +73,6 @@ def main():
                 count = os.cpu_count()
             except Exception:
                 count = 1
-        # Use all but one core, but never less than 1
         return max(1, (count or 1) - 1)
 
     def get_max_ram_gb(simsize):
@@ -93,8 +91,8 @@ def main():
             else:
                 return sys_ram * 0.125
         else:
-            logging.warning(
-                "System RAM could not be detected after several attempts.\n"
+            print(
+                "WARNING: System RAM could not be detected after several attempts.\n"
                 "Using default values: 4GB for small, 8GB for medium, 16GB for large simulations."
             )
             if simsize == "large":
@@ -116,9 +114,9 @@ def main():
 
         drift = (mean_return - 0.5 * volatility ** 2) * years
 
-        logging.info(f"The computer is NOT frozen. Running {n_simulations:,} simulations for {years} year(s) in {n_batches} parallel batches.")
-        logging.info(f"Approximately {(n_simulations * 4) / (1024 ** 3):.2f} GB of RAM will be used for the simulation.")
-        logging.info(f"Using {n_workers} CPU core(s) for parallel processing.")
+        print(f"The computer is NOT frozen. Running {n_simulations:,} simulations for {years} year(s) in {n_batches} parallel batches.")
+        print(f"Approximately {(n_simulations * 4) / (1024 ** 3):.2f} GB of RAM will be used for the simulation.")
+        print(f"Using {n_workers} CPU core(s) for parallel processing.")
 
         start_time = time.time()
 
@@ -165,8 +163,8 @@ def main():
 
         total_time = time.time() - start_time
         print()  # Move to the next line after progress
-        logging.info(f"Simulation complete! Total time: {total_time:.1f} seconds.")
-        logging.info("Processing results... (Your PC is NOT frozen, please wait while results are processed.)")
+        print(f"Simulation complete! Total time: {total_time:.1f} seconds.")
+        print("Processing results... (Your PC is NOT frozen, please wait while results are processed.)")
 
         median_ending = float(np.median(median_candidates)) if median_candidates else float('nan')
         prob_gain = gain_count / total_count if total_count else float('nan')
@@ -189,13 +187,11 @@ def main():
         except Exception:
             current_price = start_price
         percent_gain = ((median_ending - current_price) / current_price) * 100 if current_price else float('nan')
-        logging.info(f"\n--- Results for {symbol} after {years} year(s) ---")
-        logging.info(f"Probability {symbol} gains value: {prob_gain:.2%}")
-        logging.info(f"Median simulated ending price (estimated): ${median_ending:,.2f}")
-        logging.info(
-            f"Min/Max simulated ending price: ${min_price:,.2f} / ${max_price:,.2f}"
-        )
-        logging.info(f"Total percent gain from today's price (${current_price:,.2f}) to median simulated ending price: {percent_gain:.2f}%")
+        print(f"\n--- Results for {symbol} after {years} year(s) ---")
+        print(f"Probability {symbol} gains value: {prob_gain:.2%}")
+        print(f"Median simulated ending price (estimated): ${median_ending:,.2f}")
+        print(f"Min/Max simulated ending price: ${min_price:,.2f} / ${max_price:,.2f}")
+        print(f"Total percent gain from today's price (${current_price:,.2f}) to median simulated ending price: {percent_gain:.2f}%")
 
     def input_with_timeout(prompt, timeout):
         import msvcrt
@@ -217,7 +213,7 @@ def main():
                 else:
                     input_str += char
             if (time.time() - start_time) > timeout:
-                logging.info("\nNo input detected. Defaulting to 5 years of historical data.")
+                print("\nNo input detected. Defaulting to 5 years of historical data.")
                 return ''
             time.sleep(0.05)
 
@@ -245,7 +241,7 @@ def main():
     )
     args = parser.parse_args()
 
-    logging.info(
+    print(
         "\nMonte Carlo Stock/Crypto Price Simulation Tool\n"
         "------------------------------------------------\n"
         "This program estimates the probability that a stock, cryptocurrency, or index will gain value\n"
@@ -255,19 +251,19 @@ def main():
         "and provides the probability of gain, median outcome, and min/max simulated prices.\n"
     )
 
-    logging.info("You can exit the program at any time by typing 'exit' and pressing Enter.")
+    print("You can exit the program at any time by typing 'exit' and pressing Enter.")
 
     while True:
         if not args.symbol:
             symbol_input = input("Enter ticker (e.g., BTC-USD, ETH-USD, AAPL, MSFT, EURUSD=X, GC=F, SPX:IND): ").strip()
             if symbol_input.lower() == "exit":
-                logging.info("Exit requested. Terminating program immediately...")
+                print("Exit requested. Terminating program immediately...")
                 os._exit(0)
             symbol_input = symbol_input.upper()
         else:
             symbol_input = args.symbol.strip().upper()
         if symbol_input.lower() == "exit":
-            logging.info("Exit requested. Terminating program immediately...")
+            print("Exit requested. Terminating program immediately...")
             os._exit(0)
         yf_pattern = r"^\^?[A-Z0-9][A-Z0-9\-\.=]{0,14}$"
         bloomberg_pattern = r"^[A-Z0-9]{1,7}:[A-Z]{1,8}$"
@@ -298,7 +294,7 @@ def main():
             elif symbol_input.endswith("USD") and "-" not in symbol_input and len(symbol_input) > 6:
                 symbol_input = symbol_input[:-3] + "-" + symbol_input[-3:]
         if not re.fullmatch(yf_pattern, symbol_input):
-            logging.error("Invalid input. Please enter a valid ticker symbol as used by Yahoo Finance, Bloomberg, or TradingView (e.g., BTC-USD, ETH-USD, AAPL, MSFT, EURUSD=X, GC=F, SPX:IND, EURUSD:CUR).")
+            print("ERROR: Invalid input. Please enter a valid ticker symbol as used by Yahoo Finance, Bloomberg, or TradingView (e.g., BTC-USD, ETH-USD, AAPL, MSFT, EURUSD=X, GC=F, SPX:IND, EURUSD:CUR).")
             args.symbol = None
             continue
 
@@ -311,7 +307,7 @@ def main():
                 lookback_years = 5
                 break
             if lookback_input.lower() == "exit":
-                logging.info("Exit requested. Terminating program immediately...")
+                print("Exit requested. Terminating program immediately...")
                 os._exit(0)
             try:
                 lookback_years = int(lookback_input)
@@ -319,17 +315,17 @@ def main():
                     raise ValueError
                 break
             except ValueError:
-                logging.info("Invalid input. Please enter a number between 1 and 20, or press Enter for default (5 years).")
+                print("Invalid input. Please enter a number between 1 and 20, or press Enter for default (5 years).")
 
         try:
             prices = fetch_crypto_data(symbol_input, period=f"{lookback_years}y")
         except Exception:
-            logging.error(f"Invalid input. Ticker '{original_input}' (converted to '{symbol_input}') not found on Yahoo Finance or no data available. Please try again.")
+            print(f"ERROR: Invalid input. Ticker '{original_input}' (converted to '{symbol_input}') not found on Yahoo Finance or no data available. Please try again.")
             args.symbol = None
             continue
 
         if len(prices) == 0:
-            logging.error("No price data available. Please try another ticker.")
+            print("ERROR: No price data available. Please try another ticker.")
             args.symbol = None
             continue
 
@@ -340,37 +336,37 @@ def main():
     while args.years is None:
         years_input = input("Enter investment period in years (e.g., 1): ").strip()
         if years_input.lower() == "exit":
-            logging.info("Exit requested. Terminating program immediately...")
+            print("Exit requested. Terminating program immediately...")
             os._exit(0)
         try:
             args.years = float(years_input)
             if args.years <= 0:
                 raise ValueError
             if args.years != int(args.years):
-                logging.warning("For best results, use whole numbers for years (e.g., 1, 2, 5).")
+                print("WARNING: For best results, use whole numbers for years (e.g., 1, 2, 5).")
             args.years = int(args.years)
             break
         except ValueError:
-            logging.info("Invalid input. Please enter a positive number for years, or type 'exit' to quit.")
+            print("Invalid input. Please enter a positive number for years, or type 'exit' to quit.")
 
     # Determine simulation size and RAM allocation
     if args.simsize is None:
         while True:
             simsize_input = input("Enter simulation size (small, medium, or large): ").strip().lower()
             if simsize_input.lower() == "exit":
-                logging.info("Exit requested. Terminating program immediately...")
+                print("Exit requested. Terminating program immediately...")
                 os._exit(0)
             if simsize_input in ["small", "medium", "large"]:
                 args.simsize = simsize_input
                 break
             else:
-                logging.info("Invalid input. Please enter small, medium, or large for simulation size.")
+                print("Invalid input. Please enter small, medium, or large for simulation size.")
 
     # Calculate mean return and volatility for the selected symbol and period
     try:
         mean_return, volatility = compute_annualized_return_and_volatility(prices)
     except Exception as e:
-        logging.error(f"Error calculating return and volatility: {e}")
+        print(f"ERROR: Error calculating return and volatility: {e}")
         return
 
     cpu_cores = get_cpu_count()
@@ -378,32 +374,32 @@ def main():
     ram_gb = get_max_ram_gb(args.simsize)
 
     # Display settings
-    logging.info("\n--- Settings ---")
-    logging.info(f"Symbol: {args.symbol}")
+    print("\n--- Settings ---")
+    print(f"Symbol: {args.symbol}")
     time.sleep(0.2)
-    logging.info(f"Years: {args.years}")
+    print(f"Years: {args.years}")
     time.sleep(0.2)
-    logging.info(f"Simulation Size: {args.simsize}")
+    print(f"Simulation Size: {args.simsize}")
     time.sleep(0.2)
-    logging.info("Detecting system RAM...")
+    print("Detecting system RAM...")
     time.sleep(1)
-    logging.info(f"Max system RAM available for use: {max_ram_large:.2f} GB")
+    print(f"Max system RAM available for use: {max_ram_large:.2f} GB")
     time.sleep(0.2)
-    logging.info(f"CPU cores allocated for simulation: {cpu_cores}")
+    print(f"CPU cores allocated for simulation: {cpu_cores}")
     time.sleep(0.2)
-    logging.info(f"Detected Annualized Return: {mean_return * 100:.2f}%")
+    print(f"Detected Annualized Return: {mean_return * 100:.2f}%")
     time.sleep(0.2)
-    logging.info(f"Detected Annualized Volatility: {volatility * 100:.2f}%")
+    print(f"Detected Annualized Volatility: {volatility * 100:.2f}%")
     time.sleep(0.2)
-    logging.info(f"Number of Data Points Used: {len(prices)}")
+    print(f"Number of Data Points Used: {len(prices)}")
     time.sleep(0.2)
-    logging.info(f"Price Data Range: {prices.index[0].date()} to {prices.index[-1].date()}")
+    print(f"Price Data Range: {prices.index[0].date()} to {prices.index[-1].date()}")
     time.sleep(0.2)
     last_close = prices.iloc[-1]
     if hasattr(last_close, "item"):
         last_close = last_close.item()
 
-    logging.info(f"Last Closing Price: ${float(last_close):,.2f}")
+    print(f"Last Closing Price: ${float(last_close):,.2f}")
     time.sleep(0.5)
 
     # Run Monte Carlo simulation
@@ -418,38 +414,7 @@ def main():
 
     # Show summary of results
     show_summary(ending_prices, float(last_close), args.years, args.symbol)
-    logging.info("\nThank you for using the Monte Carlo Simulation tool.\n")
+    print("\nThank you for using the Monte Carlo Simulation tool.\n")
 
 if __name__ == "__main__":
-    import datetime
-    from glob import glob
-
-    if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    logs_dir = os.path.join(base_dir, "logs")
-    os.makedirs(logs_dir, exist_ok=True)
-
-    # Create a dated log file with an incrementing number
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d")
-    existing = glob(os.path.join(logs_dir, f"{date_str}_log*.txt"))
-    log_num = len(existing) + 1
-    logfile = os.path.join(logs_dir, f"{date_str}_log{log_num}.txt")
-
-    # Set up handlers with different formatters
-    file_handler = logging.FileHandler(logfile, mode="w", encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s %(processName)s %(levelname)s: %(message)s"
-    ))
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(logging.Formatter("%(message)s"))
-
-    logging.basicConfig(
-        level=logging.INFO,
-        handlers=[file_handler, console_handler]
-    )
-
     main()
-    input("Press Enter to close the window...")
