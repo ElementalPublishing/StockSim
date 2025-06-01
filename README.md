@@ -46,14 +46,38 @@ pip install -e .
 After installation, run from the command line:
 
 ```sh
-stocksim [options]
+stocksim
 ```
 
 Or, if running from source:
 
 ```sh
-python -m stocksim.main [options]
+python -m stocksim.main
 ```
+
+---
+
+## Command-Line Options
+
+You can run StockSim with the following options:
+
+- `--symbol`  
+  Ticker symbol (e.g., `BTC-USD`, `ETH-USD`, `AAPL`, `SPX:IND`, `EURUSD:CUR`)
+
+- `--years`  
+  Investment period in years (e.g., `1`)
+
+- `--simsize`  
+  Simulation size: `small`, `medium`, or `large`
+
+**Examples:**
+
+```sh
+stocksim --symbol BTC-USD --years 5 --simsize large
+stocksim --symbol AAPL --years 3 --simsize medium
+```
+
+If you omit any option, the program will prompt you for input interactively.
 
 ---
 
