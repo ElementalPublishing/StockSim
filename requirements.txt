@@ -1,5 +1,3 @@
 numpy
 yfinance
 psutil
-setuptools<80
-pyinstaller==5.13.2

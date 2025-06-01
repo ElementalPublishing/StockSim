@@ -443,7 +443,7 @@ if __name__ == "__main__":
     file_handler.setFormatter(logging.Formatter(
         "%(asctime)s %(processName)s %(levelname)s: %(message)s"
     ))
-    console_handler = logging.StreamHandler(sys.__stdout__)
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(logging.Formatter("%(message)s"))
 
     logging.basicConfig(
