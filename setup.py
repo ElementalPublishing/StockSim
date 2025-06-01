@@ -5,14 +5,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="stocksim",
-    version="1.2.2",  # <-- bumped version
+    version="1.2.4",  
     description="Monte Carlo Stock/Crypto Price Simulation Tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Wesley Alexander Houser",
     author_email="houser2388@gmail.com",
     url="https://github.com/ElementalPublishing/StockSim",
-    license="MIT",  # Change to your license if different
+    license="MIT",  
     packages=find_packages(),
     install_requires=[
         "numpy",
