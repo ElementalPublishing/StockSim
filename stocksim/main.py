@@ -1,14 +1,10 @@
 import sys
 import os
 import multiprocessing
+from stocksim.simulation import simulate_batch
 
-def simulate_batch(args):
-    start_price, drift, volatility, years, batch_len = args
-    import numpy as np
-    simulated_log_returns = drift + np.random.normal(
-        0, volatility * np.sqrt(years), batch_len
-    )
-    return start_price * np.exp(simulated_log_returns)
+def simulate_batch_unpack(args):
+    return simulate_batch(*args)
 
 def main():
     import warnings
@@ -85,38 +81,85 @@ def main():
         if sys_ram:
             sys_ram = min(sys_ram, 2048)
             if simsize == "large":
-                return sys_ram * 0.5
+                return sys_ram  # Use 70% of system RAM later
             elif simsize == "medium":
-                return sys_ram * 0.25
+                return sys_ram * 0.5
             else:
-                return sys_ram * 0.125
+                return sys_ram * 0.25
         else:
             print(
                 "WARNING: System RAM could not be detected after several attempts.\n"
-                "Using default values: 4GB for small, 8GB for medium, 16GB for large simulations."
+                "Using default values: 8GB for small, 16GB for medium, 32GB for large simulations."
             )
             if simsize == "large":
-                return 16.0
+                return 32.0
             elif simsize == "medium":
-                return 8.0
+                return 16.0
             else:
-                return 4.0
+                return 8.0
 
     def monte_carlo_simulation(
-        start_price, mean_return, volatility, years=1, percent_step=3, max_gb=4, batch_mb=None, n_workers=None
+        start_price, mean_return, volatility, years=1, percent_step=3, max_gb=4, n_workers=None, total_simulations=None
     ):
-        max_bytes = int(max_gb * 1024**3)
-        max_simulations = max_bytes // 4
+        import numpy as np
+        import time
+        import concurrent.futures
 
-        n_simulations = int(max_simulations)
-        batch_size = 10_000_000
-        n_batches = math.ceil(n_simulations / batch_size)
+        usable_bytes = int(max_gb * 1024**3 * 0.7)  # Always use 70% of allowed RAM
+        n_steps = int(252 * years)
+        float_bytes = 4  # np.float32
 
-        drift = (mean_return - 0.5 * volatility ** 2) * years
+        def estimate_batch_bytes(batch_size):
+            return int((2 * batch_size * n_steps * float_bytes + batch_size * float_bytes) * 1.2)
 
-        print(f"The computer is NOT frozen. Running {n_simulations:,} simulations for {years} year(s) in {n_batches} parallel batches.")
-        print(f"Approximately {(n_simulations * 4) / (1024 ** 3):.2f} GB of RAM will be used for the simulation.")
+        # Find the largest total_simulations that fits in usable_bytes
+        if total_simulations is not None:
+            if estimate_batch_bytes(total_simulations) > usable_bytes:
+                left, right = 1000, total_simulations
+                best_total_batch_size = 1000
+                while left <= right:
+                    mid = (left + right) // 2
+                    if estimate_batch_bytes(mid) <= usable_bytes:
+                        best_total_batch_size = mid
+                        left = mid + 1
+                    else:
+                        right = mid - 1
+                total_simulations = best_total_batch_size
+                print(f"WARNING: Requested simulations exceeds available RAM. Running {total_simulations:,} simulations (max for 70% of available RAM).")
+            else:
+                print(f"INFO: Running {total_simulations:,} simulations as requested.")
+        else:
+            left, right = 1000, int(1e9)
+            best_total_batch_size = 1000
+            while left <= right:
+                mid = (left + right) // 2
+                if estimate_batch_bytes(mid) <= usable_bytes:
+                    best_total_batch_size = mid
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            total_simulations = best_total_batch_size
+            print(f"INFO: Running {total_simulations:,} simulations (max for 70% of available RAM).")
+
+        n_workers = max(1, n_workers or 1)
+        # Divide simulations as evenly as possible among workers
+        base_batch_size = total_simulations // n_workers
+        batch_sizes = [base_batch_size] * n_workers
+        for i in range(total_simulations % n_workers):
+            batch_sizes[i] += 1
+
+        est_bytes_total = estimate_batch_bytes(total_simulations)
+        est_bytes_per_worker = [estimate_batch_bytes(bs) for bs in batch_sizes]
+
+        print(f"The computer is NOT frozen. Running {total_simulations:,} simulations for {years} year(s).")
+        print(f"Estimated RAM used (total): {est_bytes_total / (1024 ** 3):.2f} GB (plus overhead).")
         print(f"Using {n_workers} CPU core(s) for parallel processing.")
+
+        # Prepare arguments for each worker
+        batch_args = [
+            (start_price, mean_return, volatility, years, bs)
+            for bs in batch_sizes
+        ]
 
         start_time = time.time()
 
@@ -128,16 +171,11 @@ def main():
 
         MEDIAN_SAMPLE_SIZE = 1_000_000
 
-        batch_args = []
-        for i in range(n_batches):
-            this_batch = batch_size if (i < n_batches - 1) else (n_simulations - batch_size * (n_batches - 1))
-            batch_args.append((start_price, drift, volatility, years, this_batch))
-
         completed = 0
         percent_last = 0
 
         with concurrent.futures.ProcessPoolExecutor(max_workers=n_workers) as executor:
-            results = executor.map(simulate_batch, batch_args)
+            results = executor.map(simulate_batch_unpack, batch_args)
             for batch_result in results:
                 batch_len = len(batch_result)
                 completed += batch_len
@@ -150,10 +188,10 @@ def main():
                     if batch_len <= needed:
                         median_candidates.extend(batch_result)
                     else:
-                        median_candidates.extend(np.random.choice(batch_result, needed, replace=False))
+                        median_candidates.extend(np.random.choice(batch_result, needed, replace=False).astype(np.float32))
                 total_count += batch_len
 
-                percent_now = int(completed * 100 / n_simulations)
+                percent_now = int(completed * 100 / total_simulations)
                 if percent_now // percent_step > percent_last // percent_step:
                     elapsed = time.time() - start_time
                     est_total = elapsed / (percent_now / 100) if percent_now > 0 else 0
@@ -168,6 +206,10 @@ def main():
 
         median_ending = float(np.median(median_candidates)) if median_candidates else float('nan')
         prob_gain = gain_count / total_count if total_count else float('nan')
+
+        print(f"Total simulations run: {total_count:,}")
+        print(f"Number of CPU core(s) used: {n_workers}")
+        print(f"Average batch size: {int(np.mean(batch_sizes)):,}")
 
         return {
             "prob_gain": prob_gain,
@@ -373,6 +415,43 @@ def main():
     max_ram_large = get_max_ram_gb("large")
     ram_gb = get_max_ram_gb(args.simsize)
 
+    n_workers = max(1, get_cpu_count())
+
+    # Set base number of simulations by simsize (doubled)
+    base_simulations = 1231225 * 2
+    if args.simsize == "large":
+        requested_simulations = base_simulations * 3
+    elif args.simsize == "medium":
+        requested_simulations = base_simulations * 2
+    else:
+        requested_simulations = base_simulations
+
+    # For "large", always maximize up to RAM limit
+    def estimate_batch_bytes(batch_size):
+        n_steps = int(252 * args.years)
+        float_bytes = 4  # np.float32
+        return int((2 * batch_size * n_steps * float_bytes + batch_size * float_bytes) * 1.2)
+
+    if args.simsize == "large":
+        # Find the largest total_batch_size that fits in usable_bytes (all RAM)
+        left, right = 1000, requested_simulations
+        best_total_batch_size = 1000
+        usable_bytes = int(ram_gb * 1024**3 * 0.7)
+        while left <= right:
+            mid = (left + right) // 2
+            if estimate_batch_bytes(mid) <= usable_bytes:
+                best_total_batch_size = mid
+                left = mid + 1
+            else:
+                right = mid - 1
+        total_simulations = best_total_batch_size
+        if total_simulations < requested_simulations:
+            print(f"WARNING: Requested {requested_simulations:,} simulations exceeds available RAM. Running {total_simulations:,} simulations (max for 70% of available RAM).")
+        else:
+            print(f"INFO: Running {total_simulations:,} simulations as requested.")
+    else:
+        total_simulations = requested_simulations
+
     # Display settings
     print("\n--- Settings ---")
     print(f"Symbol: {args.symbol}")
@@ -410,6 +489,7 @@ def main():
         years=args.years,
         max_gb=ram_gb,
         n_workers=cpu_cores,
+        total_simulations=total_simulations,  # <-- add this
     )
 
     # Show summary of results

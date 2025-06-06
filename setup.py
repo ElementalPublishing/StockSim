@@ -1,11 +1,13 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
+import numpy
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="stocksim",
-    version="1.3.3",  # <-- new stable version
+    version="2.0.0",  # <-- new stable version
     description="Monte Carlo Stock/Crypto Price Simulation Tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -44,4 +46,7 @@ setup(
         "Source": "https://github.com/ElementalPublishing/StockSim",
         "Tracker": "https://github.com/ElementalPublishing/StockSim/issues",
     },
+    # --- Add these lines for Cython ---
+    ext_modules=cythonize("stocksim/simulation.pyx"),
+    include_dirs=[numpy.get_include()],
 )
