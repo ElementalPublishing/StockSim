@@ -97,45 +97,27 @@ def main():
         import time
         import concurrent.futures
 
-        ram_gb = get_max_ram_gb()
+        def estimate_batch_bytes(batch_size):
+            n_steps = int(252 * args.years)
+            float_bytes = 4  # np.float32
+            return int((2 * batch_size * n_steps * float_bytes + batch_size * float_bytes) * 1.2)
+
         ram_fraction = get_ram_fraction(args.simsize)
         usable_bytes = int(ram_gb * 1024**3 * ram_fraction)
 
-        usable_bytes = int(max_gb * 1024**3 * 0.7)  # Always use 70% of allowed RAM
-        n_steps = int(252 * years)
-        float_bytes = 4  # np.float32
-
-        def estimate_batch_bytes(batch_size):
-            return int((2 * batch_size * n_steps * float_bytes + batch_size * float_bytes) * 1.2)
-
         # Find the largest total_simulations that fits in usable_bytes
-        if total_simulations is not None:
-            if estimate_batch_bytes(total_simulations) > usable_bytes:
-                left, right = 1000, total_simulations
-                best_total_batch_size = 1000
-                while left <= right:
-                    mid = (left + right) // 2
-                    if estimate_batch_bytes(mid) <= usable_bytes:
-                        best_total_batch_size = mid
-                        left = mid + 1
-                    else:
-                        right = mid - 1
-                total_simulations = best_total_batch_size
-                print(f"WARNING: Requested simulations exceeds available RAM. Running {total_simulations:,} simulations (max for 70% of available RAM).")
+        left, right = 1000, int(1e9)
+        best_total_batch_size = 1000
+        while left <= right:
+            mid = (left + right) // 2
+            if estimate_batch_bytes(mid) <= usable_bytes:
+                best_total_batch_size = mid
+                left = mid + 1
             else:
-                print(f"INFO: Running {total_simulations:,} simulations as requested.")
-        else:
-            left, right = 1000, int(1e9)
-            best_total_batch_size = 1000
-            while left <= right:
-                mid = (left + right) // 2
-                if estimate_batch_bytes(mid) <= usable_bytes:
-                    best_total_batch_size = mid
-                    left = mid + 1
-                else:
-                    right = mid - 1
-            total_simulations = best_total_batch_size
-            print(f"INFO: Running {total_simulations:,} simulations (max for 70% of available RAM).")
+                right = mid - 1
+        total_simulations = best_total_batch_size
+
+        print(f"INFO: Running {total_simulations:,} simulations (max for {int(ram_fraction*100)}% of available RAM).")
 
         n_workers = max(1, n_workers or 1)
         # Divide simulations as evenly as possible among workers
@@ -408,7 +390,7 @@ def main():
         return
 
     cpu_cores = get_cpu_count()
-    max_ram_large = get_max_ram_gb("large")
+    max_ram_large = get_max_ram_gb()
     ram_gb = get_max_ram_gb()
 
     n_workers = max(1, get_cpu_count())
