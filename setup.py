@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="stocksim",
-    version="2.1.7",  # <-- set your version here
+    version="2.1.8",  # <-- set your version here
     description="Monte Carlo Stock/Crypto Price Simulation Tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
