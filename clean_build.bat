@@ -16,10 +16,3 @@ for /d %%i in (*.egg-info) do (
     echo Deleting %%i ...
     rmdir /s /q "%%i"
 )
-
-echo.
-echo Building source distribution and wheel...
-python -m build --sdist
-python -m build --wheel
-
-pause
