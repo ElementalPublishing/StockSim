@@ -109,6 +109,20 @@ pyinstaller --icon=shaggy.ico --name=StockSim stocksim/main.py
 >
 > After updating your PATH, restart your terminal or Command Prompt and try running `stocksim` again.
 
+### Windows users: C++ Compiler Required
+
+If you see an error like "Microsoft C++ 14.0 or greater is required," please install the [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+
+---
+
+## Version Notes
+
+- **v1.3.3** is the last stable **pure Python** build.  
+  This version does **not** require a C++ compiler and is easiest to install on any system with Python 3.7–3.12.  
+  However, it lacks some of the advanced functionality and speed improvements found in later versions.
+
+- **v2.x and newer** use Cython for much faster simulations and additional features, but require a C++ compiler (such as [Microsoft Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) on Windows) for installation from source.
+
 ---
 
 ## License
