@@ -2,7 +2,13 @@
 import numpy as np
 cimport numpy as np
 
+np.import_array()  # Ensure numpy C-API is initialized
+
 def simulate_batch(float start_price, float mean_return, float volatility, float years, int batch_len):
+    """
+    Run a batch of Monte Carlo simulations for geometric Brownian motion.
+    Returns an array of simulated ending prices.
+    """
     cdef int n_steps = int(252 * years)
     cdef float dt = years / n_steps
     cdef float drift = (mean_return - 0.5 * volatility ** 2) * dt

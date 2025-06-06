@@ -71,32 +71,24 @@ def main():
                 count = 1
         return max(1, (count or 1) - 1)
 
-    def get_max_ram_gb(simsize):
-        sys_ram = None
-        for attempt in range(3):
-            sys_ram = get_system_ram_gb()
-            if sys_ram:
-                break
-            time.sleep(1)
+    def get_ram_fraction(simsize):
+        if simsize == "large":
+            return 0.70
+        elif simsize == "medium":
+            return 0.50
+        else:
+            return 0.25
+
+    def get_max_ram_gb():
+        sys_ram = get_system_ram_gb()  # however you detect system RAM
         if sys_ram:
-            sys_ram = min(sys_ram, 2048)
-            if simsize == "large":
-                return sys_ram  # Use 70% of system RAM later
-            elif simsize == "medium":
-                return sys_ram * 0.5
-            else:
-                return sys_ram * 0.25
+            return min(sys_ram, 2048)  # cap at 2TB for sanity
         else:
             print(
                 "WARNING: System RAM could not be detected after several attempts.\n"
                 "Using default values: 8GB for small, 16GB for medium, 32GB for large simulations."
             )
-            if simsize == "large":
-                return 32.0
-            elif simsize == "medium":
-                return 16.0
-            else:
-                return 8.0
+            return 32.0  # fallback
 
     def monte_carlo_simulation(
         start_price, mean_return, volatility, years=1, percent_step=3, max_gb=4, n_workers=None, total_simulations=None
@@ -104,6 +96,10 @@ def main():
         import numpy as np
         import time
         import concurrent.futures
+
+        ram_gb = get_max_ram_gb()
+        ram_fraction = get_ram_fraction(args.simsize)
+        usable_bytes = int(ram_gb * 1024**3 * ram_fraction)
 
         usable_bytes = int(max_gb * 1024**3 * 0.7)  # Always use 70% of allowed RAM
         n_steps = int(252 * years)
@@ -413,7 +409,7 @@ def main():
 
     cpu_cores = get_cpu_count()
     max_ram_large = get_max_ram_gb("large")
-    ram_gb = get_max_ram_gb(args.simsize)
+    ram_gb = get_max_ram_gb()
 
     n_workers = max(1, get_cpu_count())
 
